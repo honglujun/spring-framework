@@ -33,8 +33,7 @@ import org.springframework.core.ResolvableType;
 import org.springframework.core.codec.Hints;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.HttpMessageWriter;
-import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.http.server.reactive.ServerHttpResponse;
+import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.web.reactive.accept.RequestedContentTypeResolver;
@@ -126,6 +125,7 @@ public abstract class AbstractMessageWriterResultHandler extends HandlerResultHa
 
 		Publisher<?> publisher;
 		ResolvableType elementType;
+		ResolvableType actualElementType;
 		if (adapter != null) {
 			publisher = adapter.toPublisher(body);
 			boolean isUnwrapped = KotlinDetector.isKotlinReflectPresent() &&
@@ -134,21 +134,19 @@ public abstract class AbstractMessageWriterResultHandler extends HandlerResultHa
 					!COROUTINES_FLOW_CLASS_NAME.equals(bodyType.toClass().getName());
 			ResolvableType genericType = isUnwrapped ? bodyType : bodyType.getGeneric();
 			elementType = getElementType(adapter, genericType);
+			actualElementType = elementType;
 		}
 		else {
 			publisher = Mono.justOrEmpty(body);
-			elementType = (bodyType.toClass() == Object.class && body != null ?
-					ResolvableType.forInstance(body) : bodyType);
+			actualElementType = body != null ? ResolvableType.forInstance(body) : bodyType;
+			elementType = (bodyType.toClass() == Object.class && body != null ? actualElementType : bodyType);
 		}
 
 		if (elementType.resolve() == void.class || elementType.resolve() == Void.class) {
 			return Mono.from((Publisher<Void>) publisher);
 		}
 
-		ServerHttpRequest request = exchange.getRequest();
-		ServerHttpResponse response = exchange.getResponse();
-		List<MediaType> writableMediaTypes = getMediaTypesFor(elementType);
-		MediaType bestMediaType = selectMediaType(exchange, () -> writableMediaTypes);
+		MediaType bestMediaType = selectMediaType(exchange, () -> getMediaTypesFor(elementType));
 		if (bestMediaType != null) {
 			String logPrefix = exchange.getLogPrefix();
 			if (logger.isDebugEnabled()) {
@@ -156,19 +154,26 @@ public abstract class AbstractMessageWriterResultHandler extends HandlerResultHa
 						(publisher instanceof Mono ? "0..1" : "0..N") + " [" + elementType + "]");
 			}
 			for (HttpMessageWriter<?> writer : getMessageWriters()) {
-				if (writer.canWrite(elementType, bestMediaType)) {
-					return writer.write((Publisher) publisher, actualType, elementType, bestMediaType,
-							request, response, Hints.from(Hints.LOG_PREFIX_HINT, logPrefix));
+				if (writer.canWrite(actualElementType, bestMediaType)) {
+					return writer.write((Publisher) publisher, actualType, elementType,
+							bestMediaType, exchange.getRequest(), exchange.getResponse(),
+							Hints.from(Hints.LOG_PREFIX_HINT, logPrefix));
 				}
 			}
 		}
-		else {
-			if (writableMediaTypes.isEmpty()) {
-				return Mono.error(new IllegalStateException("No writer for : " + elementType));
-			}
+
+		MediaType contentType = exchange.getResponse().getHeaders().getContentType();
+		if (contentType != null && contentType.equals(bestMediaType)) {
+			return Mono.error(new HttpMessageNotWritableException(
+					"No Encoder for [" + elementType + "] with preset Content-Type '" + contentType + "'"));
 		}
 
-		return Mono.error(new NotAcceptableStatusException(writableMediaTypes));
+		List<MediaType> mediaTypes = getMediaTypesFor(elementType);
+		if (bestMediaType == null && mediaTypes.isEmpty()) {
+			return Mono.error(new IllegalStateException("No HttpMessageWriter for " + elementType));
+		}
+
+		return Mono.error(new NotAcceptableStatusException(mediaTypes));
 	}
 
 	private ResolvableType getElementType(ReactiveAdapter adapter, ResolvableType genericType) {
@@ -192,6 +197,7 @@ public abstract class AbstractMessageWriterResultHandler extends HandlerResultHa
 		}
 		return writableMediaTypes;
 	}
+
 
 	/**
 	 * Inner class to avoid a hard dependency on Kotlin at runtime.
