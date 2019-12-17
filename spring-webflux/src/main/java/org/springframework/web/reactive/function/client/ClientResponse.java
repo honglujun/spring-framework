@@ -62,9 +62,11 @@ import org.springframework.web.reactive.function.BodyExtractor;
 *  <li>{@link #toBodilessEntity()}</li>
  * <li>{@link #releaseBody()}</li>
  * </ul>
- * You can use {@code bodyToMono(Void.class)} if no response content is
- * expected. However keep in mind that if the response does have content, the
- * connection will be closed and will not be placed back in the pool.
+ * You can also use {@code bodyToMono(Void.class)} if no response content is
+ * expected. However keep in mind the connection will be closed, instead of
+ * being placed back in the pool, if any content does arrive. This is in
+ * contrast to {@link #releaseBody()} which does consume the full body and
+ * releases any content received.
  *
  * @author Brian Clozel
  * @author Arjen Poutsma
@@ -201,6 +203,19 @@ public interface ClientResponse {
 	 * @since 5.2
 	 */
 	Mono<WebClientResponseException> createException();
+
+	/**
+	 * Return a log message prefix to use to correlate messages for this response.
+	 * The prefix is based on the {@linkplain ClientRequest#logPrefix() client
+	 * log prefix}, which itself is based on the value of the request attribute
+	 * {@link ClientRequest#LOG_ID_ATTRIBUTE} along with some extra formatting
+	 * so that the prefix can be conveniently prepended with no further
+	 * formatting no separators required.
+	 * @return the log message prefix or an empty String if the
+	 * {@link ClientRequest#LOG_ID_ATTRIBUTE} was not set.
+	 * @since 5.2.3
+	 */
+	String logPrefix();
 
 
 	// Static builder methods
