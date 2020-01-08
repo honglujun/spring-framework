@@ -59,7 +59,7 @@ dependencies {
 	testCompile("org.xmlunit:xmlunit-matchers")
 	testCompile("javax.xml.bind:jaxb-api")
 	testCompile("com.fasterxml.woodstox:woodstox-core")
-	testCompile(project(":kotlin-coroutines"))
+	compile(project(":kotlin-coroutines"))
 }
 
 jar {
