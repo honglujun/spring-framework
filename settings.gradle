@@ -1,7 +1,7 @@
 pluginManagement {
 	repositories {
 		gradlePluginPortal()
-//		maven { url 'http://maven.aliyun.com/nexus/content/groups/public/' }
+		maven { url 'http://maven.aliyun.com/nexus/content/groups/public/' }
 		maven { url 'https://repo.spring.io/plugins-release' }
 	}
 }
@@ -32,7 +32,7 @@ include "spring-webflux"
 include "spring-websocket"
 include "framework-bom"
 include "integration-tests"
-include 'spring-learn-aop'
+include "spring-learn-aop"
 
 rootProject.name = "spring"
 rootProject.children.each {project ->
