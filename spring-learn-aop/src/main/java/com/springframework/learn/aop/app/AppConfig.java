@@ -5,6 +5,8 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * 这个类相当于xml的bean文件
+ *
+ * @author win10
  */
 @Configuration
 @ComponentScan("com.springframework")

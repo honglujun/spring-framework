@@ -5,6 +5,9 @@ import com.springframework.learn.aop.dao.TestDao;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
+/**
+ * @author win10
+ */
 public class Main {
 
 	public static void main(String[] args) {
