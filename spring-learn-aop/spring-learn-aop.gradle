@@ -5,6 +5,7 @@ dependencies {
     compile(project(":spring-core"))
     optional(project(":spring-aop"))
     optional(project(":spring-context"))
+    optional(project(":spring-tx"))
     optional(project(":spring-oxm"))
     optional("org.aspectj:aspectjweaver")
     optional("org.apache.commons:commons-pool2")

@@ -11,6 +11,6 @@ import org.springframework.context.annotation.Configuration;
 public class AppConfig {
 
 	public void outPrint() {
-		System.out.println("打印AppConfig的outPrint()");
+		System.out.println("打印AppConfig的outPrint()方法");
 	}
 }
